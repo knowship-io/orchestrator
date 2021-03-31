@@ -24,13 +24,15 @@ type Job struct {
 	Completed        bool   `json:"complete" bson:"completed"`
 	BuildId          string `json:"buildId" bson:"buildId"`
 	WorkerId         string `json:"workerId" bson:"workerId"`
+	VideoUrl         string `json:"videoUrl" bson:"videoUrl"`
 }
 
-func CreateJob(status, name string) *Job {
+func CreateJob(name string, videoUrl string) *Job {
 	return &Job{
-		Status:    status,
+		Status:    "PENDING",
 		Name:      name,
 		Completed: false,
+		VideoUrl: videoUrl,
 	}
 }
 

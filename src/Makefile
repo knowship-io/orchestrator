@@ -37,16 +37,27 @@ serve: start
 	xargs -n1 -I {} make restart
 
 launch:
-	http://localhost:8081/simpleevents/v1/
 	BRIGADE_HOST=localhost \
 	BRIGADE_PORT=8081 \
-	BRIGADE_PROJECT=brigade-4c067ce5f05663c7d8fb6b0db0cbcf140284077fb3e907dff60d37 \
-	BRIGADE_SECRET=genericsecret \
 	MONGODB_USER=root \
 	MONGODB_PASS=rootpassword \
 	MONGODB_HOST=0.0.0.0 \
 	MONGODB_PORT=27017 \
 	go run $(GO_FILES) & echo $$! > $(PID_FILE)
+
+mongo-up:
+	docker-compose up mongo
+
+up: mongo-up
+	GENERIC_GATEWAY_HOST=localhost\
+	GENERIC_GATEWAY_PORT=7745 \
+	BRIGADE_API_HOST=localhost \
+	BRIGADE_API_PORT=8081 \
+	MONGODB_USER=root \
+	MONGODB_PASS=rootpassword \
+	MONGODB_HOST=0.0.0.0 \
+	MONGODB_PORT=27017 \
+	go run server.go
 
 # .PHONY is used for reserving tasks words
 .PHONY: start before stop restart serve launch

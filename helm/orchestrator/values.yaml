@@ -6,6 +6,7 @@ replicaCount: 1
 
 orchestrator:
   image: orchestrator:latest
+  environment: minikube
 
 mongodb:
   useStatefulSet: true
@@ -44,7 +45,7 @@ brigade:
 
 brigade-project:
   ## Name of the project, in the form "user/project"                        
-  project: "coeus/echoer"                               
+  project: "coeus/coeus-detector"                               
                                                                               
   ## Domain/Org/Project                                                        
   repository: "knowship.io"                          
@@ -62,17 +63,27 @@ brigade-project:
     const { events, Job } = require("brigadier");
 
     events.on("simpleevent", (e, p) => { 
-      var echo = new Job("echo", "curlimages/curl:7.74.0")
-      echo.tasks = [
+      var detect = new Job("detect", "coeus-engine:latest")
+      
+      detect.tasks = [
         "export URL=orchestrator:3000/api/jobs/$JOB_ID/status",
-        "curl --request PATCH $URL --header 'Content-Type: application/json' --data-raw '{\"status\":\"STARTED\"}'"
+        "curl --request PATCH $URL --header 'Content-Type: application/json' --data-raw '{\"status\":\"STARTED\"}' | jq .",
+        "export STATUS_URL=orchestrator:3000/api/jobs/$JOB_ID/brigade",
+        "curl --request PATCH $STATUS_URL --header 'Content-Type: application/json' --data-raw '{\"buildId\":\"'$BUILD_ID'\"}' | jq .",
+        "/usr/src/entrypoint.sh",
+        "export STATUS_URL=orchestrator:3000/api/jobs/$JOB_ID/status",
+        "curl --request PATCH $STATUS_URL --header 'Content-Type: application/json' --data-raw '{\"status\":\"DONE\"}' | jq ."
       ]
 
-      echo.env = {
-        "JOB_ID": JSON.parse(e.payload).jobId
+      detect.env = {
+        "JOB_ID": JSON.parse(e.payload).jobId,
+        "VIDEO_URL": JSON.parse(e.payload).videoUrl,
+        "BUILD_ID": e.buildID,
+        "AWS_ACCESS_KEY_ID": p.secrets.awsAccessKeyId,
+        "AWS_SECRET_ACCESS_KEY": p.secrets.awsSecretAccessKey
       }
 
-      echo.run()
+      detect.run()
     });
 
     events.on("after", () => {
@@ -118,7 +129,7 @@ brigade-project:
   ## Inside of the job's pod, $MY_ENV_VAR = "super awesome"
   # secrets:
   #   ## Example:
-  #   username: hello
+  #   hello: world
 
   ## OPTIONAL: vcsSidecar is the image that fetches a repo from a VCS
   ## The default sidecar uses Git to fetch a copy of the project.
